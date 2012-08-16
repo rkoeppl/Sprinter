@@ -359,7 +359,7 @@ unsigned char manage_monitor = 255;
   #ifdef SD_FAST_XFER_AKTIV
   
   #ifdef PIDTEMP
-    extern int g_heater_pwm_val;
+    extern volatile unsigned char g_heater_pwm_val;
   #endif
   
   void fast_xfer()
@@ -371,7 +371,9 @@ unsigned char manage_monitor = 255;
     if(HEATER_0_PIN > -1) WRITE(HEATER_0_PIN,LOW);
     if(HEATER_1_PIN > -1) WRITE(HEATER_1_PIN,LOW);
     
+  #ifdef PIDTEMP
     g_heater_pwm_val = 0;
+  #endif
     
     lastxferchar = 1;
     xferbytes = 0;
@@ -1387,7 +1389,7 @@ FORCE_INLINE void process_commands()
           if (code_seen('P') && pin_status >= 0 && pin_status <= 255)
           {
             int pin_number = code_value();
-            for(int i = 0; i < sizeof(sensitive_pins); i++)
+            for(int i = 0; i < sizeof(sensitive_pins) / sizeof(int); i++)
             {
               if (sensitive_pins[i] == pin_number)
               {
@@ -1647,7 +1649,7 @@ FORCE_INLINE void process_commands()
             axis_steps_per_sqr_second[i] = code_value() * axis_steps_per_unit[i];
           }
         }
-
+        break;
       #if 0 // Not used for Sprinter/grbl gen6
       case 202: // M202
         for(int i=0; i < NUM_AXIS; i++) 
@@ -2346,7 +2348,7 @@ void plan_buffer_line(float x, float y, float z, float e, float feed_rate)
   delta_mm[Z_AXIS] = (target[Z_AXIS]-position[Z_AXIS])/axis_steps_per_unit[Z_AXIS];
   delta_mm[E_AXIS] = (target[E_AXIS]-position[E_AXIS])/axis_steps_per_unit[E_AXIS];
   
-  if ( block->steps_x == 0 && block->steps_y == 0 && block->steps_z == 0 ) {
+  if ( block->steps_x <= dropsegments && block->steps_y <= dropsegments && block->steps_z <= dropsegments ) {
     block->millimeters = fabs(delta_mm[E_AXIS]);
   } else {
     block->millimeters = sqrt(square(delta_mm[X_AXIS]) + square(delta_mm[Y_AXIS]) + square(delta_mm[Z_AXIS]));
